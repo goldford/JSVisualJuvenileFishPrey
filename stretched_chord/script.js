@@ -21,6 +21,7 @@ var outerRadius = Math.min(width, height) / 2  - (mobileScreen ? 80 : 100),
 	opacityDefault = 0.7, //default opacity of chords
 	opacityLow = 0.02; //hover opacity of those chords not hovered over
 	textoffset = 10; 
+	datasplit = 0.8; // suggested by Nadieh in email May 2020 to address strange drawing issue
 	
 ////////////////////////////////////////////////////////////
 ////////////////////////// Data ////////////////////////////
@@ -28,7 +29,8 @@ var outerRadius = Math.min(width, height) / 2  - (mobileScreen ? 80 : 100),
 
 //var Names = ["Sockeye","Chum","Pink","Coho","Chinook","Pacifc Herring","Eulachon","","Amphipods","Barnacles","Calanoids","Chaetognaths","Cladocerans","Ctenophores","Decapods","Eggs","Euphausiids","Fish","Insects","Larvaceans","Molluscs","Ostracods","Phytoplankton","Polychaetes","Other",""]; //separate prey / pred and end list with ""
 var Names = ["PINK SALMON","CHUM SALMON","SOCKEYE SALMON","CHINOOK SALMON","EULACHON","WALLEYE POLLOCK","THREESPINE STICKLEBACK","PRICKLEBACKS","SNAKE PRICKLEBACK","PACIFIC SAND LANCE","KELP GREENLING","LINGCOD","PACIFIC LAMPREY (freshwater)","PACIFIC HERRING","","Amphipod","Barnacle","Calanoid","Cladoceran","Ctenophore","decapod","eggs","euphasiid","fish","insects","isopod","ostracod","polychaete","Sagittoid","trematode","tunicates","Unknown","cumacean","Miscellaneous","mollusc","mysiid","Nematode","cestoda","Pycnogonida",""]
-var Colors1 = ["Blue","Gray","Pink","Orange","Red","Green","Purple","Black","Blue","Gray","Pink","Orange","Red","Green","Purple","","Amphipod","Barnacle","Calanoid","Cladoceran","Ctenophore","decapod","eggs","euphasiid","fish","insects","isopod","ostracod","polychaete","Sagittoid","trematode","tunicates","Unknown","cumacean","Miscellaneous","mollusc","mysiid","Nematode","cestoda","Pycnogonida",""]; //separate prey / pred and end list with ""
+//var Colors1 = ["Blue","Gray","Pink","Orange","Red","Green","Purple","Black","Blue","Gray","Pink","Orange","Red","Green","Purple","","Amphipod","Barnacle","Calanoid","Cladoceran","Ctenophore","decapod","eggs","euphasiid","fish","insects","isopod","ostracod","polychaete","Sagittoid","trematode","tunicates","Unknown","cumacean","Miscellaneous","mollusc","mysiid","Nematode","cestoda","Pycnogonida",""]; //separate prey / pred and end list with ""
+var Colors1 = ["Blue","Gray","Pink","Orange","Red","Green","Purple","Black","Blue","Gray","Pink","Orange","Red","Green","Purple"];
 
 
 var respondents = 323, //Total number of respondents (i.e. the number that makes up the total group)
@@ -230,7 +232,7 @@ g.append("path")
 	.style("pointer-events", function(d,i) { return (Names[i] === "" ? "none" : "auto"); })
 	.attr("d", arc)
 	.attr("transform", function(d, i) { //Pull the two slices apart
-				d.pullOutSize = pullOutSize * ( d.startAngle + 0.001 > Math.PI ? -1 : 1);
+				d.pullOutSize = pullOutSize * ( d.startAngle + 0.001 > datasplit*Math.PI ? -1 : 1);
 				return "translate(" + d.pullOutSize + ',' + 0 + ")";
 	});
 
