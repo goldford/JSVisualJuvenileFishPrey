@@ -1,0 +1,197 @@
+////////////////////////////////////////////////////////////
+//////////////////////// Set-up ////////////////////////////
+////////////////////////////////////////////////////////////
+var screenWidth = $(window).width(),
+	mobileScreen = (screenWidth > 400 ? false : true);
+
+var margin = {left: 50, top: 10, right: 50, bottom: 10},
+	width = Math.min(screenWidth, 800) - margin.left - margin.right,
+	height = (mobileScreen ? 300 : Math.min(screenWidth, 800)*5/6) - margin.top - margin.bottom;
+			
+var svg = d3.select("#chart").append("svg")
+			.attr("width", (width + margin.left + margin.right))
+			.attr("height", (height + margin.top + margin.bottom));
+			
+var wrapper = svg.append("g").attr("class", "chordWrapper")
+			.attr("transform", "translate(" + (width / 2 + margin.left) + "," + (height / 2 + margin.top) + ")");;
+			
+var outerRadius = Math.min(width, height) / 2  - (mobileScreen ? 80 : 100),
+	innerRadius = outerRadius * 0.96,
+	pullOutSize = (mobileScreen? 40 : 20), // default 40: 50
+	opacityDefault = 0.7, //default opacity of chords
+	opacityLow = 0.02; //hover opacity of those chords not hovered over
+	textoffset = 10; 
+	datasplit = 0.8; // suggested by Nadieh in email May 2020 to address strange drawing issue
+	
+////////////////////////////////////////////////////////////
+////////////////////////// Data ////////////////////////////
+////////////////////////////////////////////////////////////
+
+var Names = ["PINK SALMON","CHUM SALMON","SOCKEYE SALMON","CHINOOK SALMON","EULACHON","WALLEYE POLLOCK","THREESPINE STICKLEBACK","PRICKLEBACKS","SNAKE PRICKLEBACK","PACIFIC SAND LANCE","KELP GREENLING","LINGCOD","PACIFIC LAMPREY (freshwater)","PACIFIC HERRING","","Amphipod","Barnacle","Calanoid","Cladoceran","Ctenophore","decapod","eggs","euphasiid","fish","insects","isopod","ostracod","polychaete","Sagittoid","trematode","tunicates","Unknown","cumacean","Miscellaneous","mollusc","mysiid","Nematode","cestoda","Pycnogonida","phytoplankton",""]
+//var Names = ["PINK SALMON","CHUM SALMON","SOCKEYE SALMON","CHINOOK SALMON","EULACHON","WALLEYE POLLOCK","THREESPINE STICKLEBACK","PRICKLEBACKS","SNAKE PRICKLEBACK","PACIFIC SAND LANCE","KELP GREENLING","LINGCOD","PACIFIC LAMPREY (freshwater)","PACIFIC HERRING","","Amphipod","Barnacle","Calanoid","Cladoceran","Ctenophore","decapod","eggs","euphasiid","fish","insects","isopod","ostracod","polychaete","Sagittoid","trematode","tunicates","Unknown","cumacean","Miscellaneous","mollusc","mysiid","Nematode","cestoda","Pycnogonida",""]
+//var Colors1 = ["Blue","Gray","Pink","Orange","Red","Green","Purple","Black","Blue","Gray","Pink","Orange","Red","Green","Purple","","Amphipod","Barnacle","Calanoid","Cladoceran","Ctenophore","decapod","eggs","euphasiid","fish","insects","isopod","ostracod","polychaete","Sagittoid","trematode","tunicates","Unknown","cumacean","Miscellaneous","mollusc","mysiid","Nematode","cestoda","Pycnogonida",""]; //separate prey / pred and end list with ""
+var Colors1 = ["Blue","Gray","Pink","Orange","Red","Green","Purple","Black","Blue","Gray","Pink","Orange","Red","Green","Purple"];
+
+
+var respondents = 323, //Total number of respondents (i.e. the number that makes up the total group)
+	emptyPerc = 0.7, //What % of the circle should become empty
+	emptyStroke = Math.round(respondents*emptyPerc); 
+var matrix = [
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.57,0.06,2.74,0,0,1.05,0.09,0.25,30.52,0.9,0,0.03,0.09,0.04,0,2.73,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.55,0.17,5.26,0.67,0.18,0.37,0.1,0.17,13.67,1.72,0,0.02,0.29,0.04,0,3.61,0,0.01,0,0,0.59,0.01,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.7,0.01,17.51,0.17,0,0.22,0,0.61,10.14,1.94,0.01,0.06,0.1,1.06,0,0.94,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.23,0,7.7,0,0,1.35,0,0.92,108.87,2.86,0,0,0,0,0,0.31,0,0,0.02,0.07,0,0,0,0.01,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.21,0,0,0.01,0.01,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.65,0,0,0,0.38,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.34,0,3.81,0,0,0.04,0,0.11,0.09,0.13,0,0,0.02,0.09,0,1.05,0,0,0,0,0,0.02,0.02,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.27,0,0,0,0.11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.16,0,0,0,0.04,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2.92,0.09,0,0.03,0.87,0.01,0.62,0,0,0,0.1,0,0,1.52,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.03,0,1.23,0.01,0,0.01,0.04,0.01,0.09,0,0.02,0.01,0,0,0,0.13,0,0,0,0,0,0.04,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.43,0,0,0,0.19,0,0.25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.3,0.01,0,0,0.03,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.79,0.03,56.71,0.97,0,2.89,8.05,4.85,5.13,0.04,0,0.07,0.13,0,0.02,1.68,0,0.01,0,0,0.01,0.02,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,emptyStroke],
+	[1.57,0.55,0.7,0.23,0,0,0.34,0,0,0,0.03,0,0,1.79,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0.06,0.17,0.01,0,0,0,0,0,0,0,0,0,0,0.03,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[2.74,5.26,17.51,7.7,0.21,0.65,3.81,0.27,0.16,2.92,1.23,1.43,0.3,56.71,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0.67,0.17,0,0,0,0,0,0,0.09,0.01,0,0.01,0.97,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0.18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[1.05,0.37,0.22,1.35,0.01,0,0.04,0,0,0.03,0.01,0,0,2.89,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0.09,0.1,0,0,0.01,0.38,0,0.11,0.04,0.87,0.04,0.19,0.03,8.05,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0.25,0.17,0.61,0.92,0,0,0.11,0,0,0.01,0.01,0,0,4.85,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[30.52,13.67,10.14,108.87,0,0,0.09,0,0,0.62,0.09,0.25,0,5.13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0.9,1.72,1.94,2.86,0,0,0.13,0,0,0,0,0,0,0.04,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0.01,0,0,0,0,0,0,0,0.02,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0.03,0.02,0.06,0,0,0,0,0,0,0,0.01,0,0,0.07,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0.09,0.29,0.1,0,0,0,0.02,0,0,0.1,0,0,0,0.13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0.04,0.04,1.06,0,0,0,0.09,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0.02,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[2.73,3.61,0.94,0.31,0,0,1.05,0,0,1.52,0.13,0,0,1.68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0.01,0,0,0,0,0,0,0,0,0,0,0,0.01,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0.02,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0.07,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0.59,0,0,0,0,0,0,0,0,0,0,0,0.01,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0.01,0,0,0,0,0.02,0,0,0,0.04,0,0,0.02,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0.02,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0.01,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,emptyStroke,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
+];
+//Calculate how far the Chord Diagram needs to be rotated clockwise to make the dummy
+//invisible chord center vertically
+var offset = (2 * Math.PI) * (emptyStroke/(respondents + emptyStroke))/4;
+
+//Custom sort function of the chords to keep them in the original order
+function customSort(a,b) {
+	return 1;
+};
+
+//Custom sort function of the chords to keep them in the original order
+var chord = customChordLayout() //d3.layout.chord()//Custom sort function of the chords to keep them in the original order
+	.padding(.02)
+	.sortChords(d3.descending) //which chord should be shown on top when chords cross. Now the biggest chord is at the bottom
+	.matrix(matrix);
+	
+var arc = d3.svg.arc()
+	.innerRadius(innerRadius)
+	.outerRadius(outerRadius)
+	.startAngle(startAngle) //startAngle and endAngle now include the offset in degrees
+	.endAngle(endAngle);
+
+var path = stretchedChord()
+	.radius(innerRadius)
+	.startAngle(startAngle)
+	.endAngle(endAngle)
+	.pullOutSize(pullOutSize);
+
+////////////////////////////////////////////////////////////
+//////////////////// Draw outer Arcs ///////////////////////
+////////////////////////////////////////////////////////////
+
+var g = wrapper.selectAll("g.group")
+	.data(chord.groups)
+	.enter().append("g")
+	.attr("class", "group")
+	.on("mouseover", fade(opacityLow))
+	.on("mouseout", fade(opacityDefault));
+
+g.append("path")
+	.style("stroke", function(d,i) { return (Names[i] === "" ? "none" : "#00A1DE"); })
+	.style("fill", function(d,i) { return (Names[i] === "" ? "none" : "#00A1DE"); })
+	.style("pointer-events", function(d,i) { return (Names[i] === "" ? "none" : "auto"); })
+	.attr("d", arc)
+	.attr("transform", function(d, i) { //Pull the two slices apart
+				d.pullOutSize = pullOutSize * ( d.startAngle + 0.001 > datasplit*Math.PI ? -1 : 1);
+				return "translate(" + d.pullOutSize + ',' + 0 + ")";
+	});
+
+
+////////////////////////////////////////////////////////////
+////////////////////// Append Names ////////////////////////
+////////////////////////////////////////////////////////////
+
+//The text also needs to be displaced in the horizontal directions
+//And also rotated with the offset in the clockwise direction
+g.append("text")
+	.each(function(d) { d.angle = ((d.startAngle + d.endAngle) / 2) + offset;})
+	.attr("dy", ".35em")
+	.attr("class", "titles")
+	.attr("text-anchor", function(d) { return d.angle > Math.PI ? "end" : null; })
+	.attr("transform", function(d,i) { 
+		var c = arc.centroid(d);
+		return "translate(" + (c[0] + d.pullOutSize) + "," + c[1] + ")"
+		+ "rotate(" + (d.angle * 180 / Math.PI - 90) + ")"
+		+ "translate(" + textoffset + ",0)"
+		+ (d.angle > Math.PI ? "rotate(180)" : "")
+	})
+  .text(function(d,i) { return Names[i]; });
+
+////////////////////////////////////////////////////////////
+//////////////////// Draw inner chords /////////////////////
+////////////////////////////////////////////////////////////
+ 
+var chords = wrapper.selectAll("path.chord")
+	.data(chord.chords)
+	.enter().append("path")
+	.attr("class", "chord")
+	.style("stroke", "none")
+	//.style("fill", "#C4C4C4")
+	.style("fill", function(d){ return(Colors1[d.source.index]) })
+	.style("opacity", function(d) { return (Names[d.source.index] === "" ? 0 : opacityDefault); }) //Make the dummy strokes have a zero opacity (invisible)
+	.style("pointer-events", function(d,i) { return (Names[d.source.index] === "" ? "none" : "auto"); }) //Remove pointer events from dummy strokes
+	.attr("d", path);	
+
+////////////////////////////////////////////////////////////
+///////////////////////// Tooltip //////////////////////////
+////////////////////////////////////////////////////////////
+
+//Arcs
+g.append("title")	
+	.text(function(d, i) {return Math.round(d.value) + " g prey Biomass " + Names[i];});
+	
+//Chords
+chords.append("title")
+	.text(function(d) {
+		return [Math.round(d.source.value), " from ", Names[d.target.index], " to ", Names[d.source.index]].join(""); 
+	});
+	
+////////////////////////////////////////////////////////////
+////////////////// Extra Functions /////////////////////////
+////////////////////////////////////////////////////////////
+
+//Include the offset in de start and end angle to rotate the Chord diagram clockwise
+function startAngle(d) { return d.startAngle + offset; }
+function endAngle(d) { return d.endAngle + offset; }
+
+// Returns an event handler for fading a given chord group
+function fade(opacity) {
+  return function(d, i) {
+	svg.selectAll("path.chord")
+		.filter(function(d) { return d.source.index !== i && d.target.index !== i && Names[d.source.index] !== ""; })
+		.transition("fadeOnArc")
+		.style("opacity", opacity);
+  };
+}//fade
